@@ -1,0 +1,23 @@
+import pandas as pd
+import zipfile
+
+MAX_ROWS = 600000
+
+def export_to_excel(df):
+    files = []
+
+    for i in range(0, len(df), MAX_ROWS):
+        chunk = df.iloc[i:i+MAX_ROWS]
+        file_name = f"export_part_{i//MAX_ROWS + 1}.xlsx"
+        chunk.to_excel(file_name, index=False)
+        files.append(file_name)
+
+    if len(files) == 1:
+        return files[0]
+
+    zip_name = "export_files.zip"
+    with zipfile.ZipFile(zip_name, "w") as zipf:
+        for file in files:
+            zipf.write(file)
+
+    return zip_name
