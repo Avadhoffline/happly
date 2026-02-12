@@ -1,0 +1,16 @@
+from database import get_connection
+
+def authenticate(email, password):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    query = """
+    SELECT * FROM Users
+    WHERE Email = ? AND Password = ?
+    """
+
+    cursor.execute(query, (email, password))
+    user = cursor.fetchone()
+
+    conn.close()
+    return user
