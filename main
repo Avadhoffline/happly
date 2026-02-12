@@ -1,0 +1,46 @@
+from fastapi import FastAPI, Request, Form
+from fastapi.responses import HTMLResponse, FileResponse
+from fastapi.templating import Jinja2Templates
+from fastapi.staticfiles import StaticFiles
+import pandas as pd
+import os
+
+from database import get_connection
+from auth import authenticate
+from excel_export import export_to_excel
+
+# Get the directory where main.py is located
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+app = FastAPI()
+
+templates = Jinja2Templates(directory=os.path.join(BASE_DIR, "templates"))
+app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")), name="static")
+
+@app.get("/", response_class=HTMLResponse)
+def login_page(request: Request):
+    return templates.TemplateResponse("login.html", {"request": request})
+
+@app.post("/login")
+def login(request: Request, email: str = Form(...), password: str = Form(...)):
+    user = authenticate(email, password)
+    if not user:
+        return HTMLResponse("Invalid login")
+
+    return templates.TemplateResponse("dashboard.html", {"request": request})
+
+@app.post("/search")
+def search(hs_code: str = Form(...)):
+    conn = get_connection()
+
+    query = """
+    SELECT *
+    FROM dbo.Indonesia_Import_Welexo_Dec25
+    WHERE hs_code LIKE ?
+    """
+
+    df = pd.read_sql(query, conn, params=[hs_code + "%"])
+    conn.close()
+
+    file = export_to_excel(df)
+    return FileResponse(file, filename=file)
